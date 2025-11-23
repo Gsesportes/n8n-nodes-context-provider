@@ -18,14 +18,14 @@ interface Context {
 
 export class ContextProvider implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Provedor de Contexto',
+		displayName: 'Context Tool',
 		name: 'contextProvider',
 		icon: 'file:contextProvider.svg',
 		group: ['transform'],
 		version: 1,
 		description: 'Fornece contextos dinâmicos em linguagem natural para agentes de IA',
 		defaults: {
-			name: 'Provedor de Contexto',
+			name: 'Context Tool',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
