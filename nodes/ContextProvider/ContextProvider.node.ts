@@ -168,26 +168,46 @@ export class ContextProvider implements INodeType {
 						name: toolName,
 						description: toolDescription,
 						func: async (input: string) => {
-							const term = input.toLowerCase().trim();
-							// Busca exata ou parcial
-							const found = contexts.find(c => c.name.toLowerCase().includes(term) || term.includes(c.name.toLowerCase()));
-							
-							if (found) {
-								return found.content;
+							// Validação de input
+							if (typeof input !== 'string') {
+								return "Erro: O input para a busca de contexto deve ser um texto (string).";
 							}
-							
+
+							const term = input.toLowerCase().trim();
+
+							if (!term) {
+								return "Erro: O termo de busca não pode ser vazio ou conter apenas espaços.";
+							}
+
 							// Tenta buscar "all" ou "todos"
-							if (term === 'all' || term === 'todos' || term === 'tudo') {
+							if (term === 'all' || term === 'todos' || term === 'tudo' || term === 'lista') {
 								return JSON.stringify(contexts.map(c => ({ nome: c.name, conteudo: c.content })));
 							}
 
+							// Busca por inclusão (múltiplos resultados possíveis)
+							// Ex: Busca "regras" encontra "regras_pagamento" e "regras_envio"
+							const matches = contexts.filter(c => 
+								c.name.toLowerCase().includes(term) || term.includes(c.name.toLowerCase())
+							);
+							
+							if (matches.length === 1) {
+								return matches[0].content;
+							}
+
+							if (matches.length > 1) {
+								return `Encontrei múltiplos contextos relacionados a "${term}":\n\n` + 
+									   matches.map(c => `--- [${c.name}] ---\n${c.content}`).join('\n\n');
+							}
+
 							const availableNames = contexts.map(c => c.name).join(', ');
-							return `Contexto não encontrado para o termo: "${input}". Contextos disponíveis: ${availableNames}`;
+							return `Contexto não encontrado para o termo: "${input}". Tente buscar por um destes nomes: ${availableNames}`;
 						},
 					});
 
 					outputData = {
-						tool: tool, // O n8n reconhece essa propriedade 'tool' quando conectada a um Agente
+						tool_created: true,
+						tool_name: toolName,
+						tool: tool, // Propriedade reconhecida pelo Agente do n8n
 					};
 
 				} else if (outputMode === 'all') {
