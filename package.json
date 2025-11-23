@@ -1,0 +1,46 @@
+{
+  "name": "n8n-nodes-context-provider-SEU-NOME-AQUI",
+  "version": "1.0.0",
+  "description": "Nó personalizado para fornecer contextos dinâmicos em linguagem natural para agentes de IA no n8n.",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n-node",
+    "ai",
+    "agent",
+    "context",
+    "llm",
+    "langchain"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "author": {
+    "name": "Seu Nome",
+    "email": "seu@email.com"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && copyfiles -u 1 nodes/**/*.svg dist",
+    "dev": "tsc --watch",
+    "lint": "tslint -p tsconfig.json -c tslint.json",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "nodes": [
+      "dist/nodes/ContextProvider/ContextProvider.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "copyfiles": "^2.4.1",
+    "n8n-workflow": "*",
+    "n8n-core": "*",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

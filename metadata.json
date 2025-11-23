@@ -1,0 +1,5 @@
+{
+  "name": "n8n-nodes-context-provider",
+  "description": "Um nó personalizado do n8n para fornecer contextos dinâmicos em linguagem natural para Agentes de IA.",
+  "requestFramePermissions": []
+}
