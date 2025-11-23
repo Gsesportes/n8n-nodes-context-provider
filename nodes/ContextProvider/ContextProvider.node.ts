@@ -6,6 +6,11 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
+// Importação dinâmica para evitar erros de build se a lib não for carregada corretamente no ambiente n8n padrão,
+// mas necessária para tipagem se possível. No runtime do n8n, o langchain geralmente está disponível,
+// mas aqui garantimos que o pacote 'langchain' esteja no package.json.
+import { DynamicTool } from 'langchain/tools';
+
 interface Context {
 	name: string;
 	content: string;
@@ -45,7 +50,7 @@ export class ContextProvider implements INodeType {
 								type: 'string',
 								default: '',
 								placeholder: 'ex: contexto_onboarding',
-								description: 'Identificador único para este contexto',
+								description: 'Identificador único para este contexto (será usado pelo Agente para buscar)',
 								required: true,
 							},
 							{
@@ -70,18 +75,49 @@ export class ContextProvider implements INodeType {
 				type: 'options',
 				options: [
 					{
-						name: 'Retornar Todos os Contextos',
-						value: 'all',
-						description: 'Retorna um objeto contendo todos os contextos definidos',
+						name: 'Ferramenta de Agente IA',
+						value: 'aiTool',
+						description: 'Gera uma Tool que pode ser conectada a um Agente de IA',
 					},
 					{
-						name: 'Retornar por Nome',
+						name: 'Retornar Todos os Contextos (JSON)',
+						value: 'all',
+						description: 'Retorna um objeto JSON contendo todos os contextos definidos',
+					},
+					{
+						name: 'Retornar por Nome (Busca)',
 						value: 'byName',
-						description: 'Filtra e retorna um contexto específico pelo nome',
+						description: 'Filtra e retorna um contexto específico pelo nome agora',
 					},
 				],
-				default: 'all',
+				default: 'aiTool',
 			},
+			// Configurações da Ferramenta (Aparecem apenas no modo aiTool)
+			{
+				displayName: 'Nome da Ferramenta',
+				name: 'toolName',
+				type: 'string',
+				default: 'obter_contexto',
+				displayOptions: {
+					show: {
+						outputMode: ['aiTool'],
+					},
+				},
+				description: 'Nome da função que o Agente vai chamar. Use letras minúsculas e underline (ex: buscar_regras).',
+			},
+			{
+				displayName: 'Descrição da Ferramenta',
+				name: 'toolDescription',
+				type: 'string',
+				default: 'Use esta ferramenta para buscar informações específicas de contexto, regras ou documentação. O input deve ser o nome do contexto desejado.',
+				displayOptions: {
+					show: {
+						outputMode: ['aiTool'],
+					},
+				},
+				description: 'Instrução para o Agente saber QUANDO usar esta ferramenta.',
+			},
+			// Configuração de Busca (Aparece apenas no modo byName)
 			{
 				displayName: 'Nome do Contexto para Buscar',
 				name: 'contextNameToSearch',
@@ -109,11 +145,6 @@ export class ContextProvider implements INodeType {
 					context?: Array<{ contextName: string; contextContent: string }>;
 				};
 				const outputMode = this.getNodeParameter('outputMode', itemIndex) as string;
-				const contextNameToSearch = this.getNodeParameter(
-					'contextNameToSearch',
-					itemIndex,
-					'',
-				) as string;
 
 				const contexts: Context[] = [];
 
@@ -128,11 +159,40 @@ export class ContextProvider implements INodeType {
 
 				let outputData: any;
 
-				if (outputMode === 'all') {
-					// Retorna todos os contextos em um formato fácil para a IA consumir
+				if (outputMode === 'aiTool') {
+					const toolName = this.getNodeParameter('toolName', itemIndex, 'obter_contexto') as string;
+					const toolDescription = this.getNodeParameter('toolDescription', itemIndex, '') as string;
+
+					// Criação da Ferramenta LangChain
+					const tool = new DynamicTool({
+						name: toolName,
+						description: toolDescription,
+						func: async (input: string) => {
+							const term = input.toLowerCase().trim();
+							// Busca exata ou parcial
+							const found = contexts.find(c => c.name.toLowerCase().includes(term) || term.includes(c.name.toLowerCase()));
+							
+							if (found) {
+								return found.content;
+							}
+							
+							// Tenta buscar "all" ou "todos"
+							if (term === 'all' || term === 'todos' || term === 'tudo') {
+								return JSON.stringify(contexts.map(c => ({ nome: c.name, conteudo: c.content })));
+							}
+
+							const availableNames = contexts.map(c => c.name).join(', ');
+							return `Contexto não encontrado para o termo: "${input}". Contextos disponíveis: ${availableNames}`;
+						},
+					});
+
+					outputData = {
+						tool: tool, // O n8n reconhece essa propriedade 'tool' quando conectada a um Agente
+					};
+
+				} else if (outputMode === 'all') {
 					outputData = {
 						contexts: contexts,
-						// Cria um mapa chave-valor para busca fácil no JSON
 						contextsMap: contexts.reduce(
 							(acc, curr) => ({ ...acc, [curr.name]: curr.content }),
 							{},
@@ -140,7 +200,8 @@ export class ContextProvider implements INodeType {
 						totalContexts: contexts.length,
 					};
 				} else if (outputMode === 'byName') {
-					// Encontrar contexto específico
+					const contextNameToSearch = this.getNodeParameter('contextNameToSearch', itemIndex, '') as string;
+					
 					const foundContext = contexts.find(
 						(c) => c.name.toLowerCase() === contextNameToSearch.toLowerCase().trim(),
 					);

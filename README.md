@@ -1,72 +1,84 @@
-# n8n-nodes-context-provider
+# n8n-nodes-context-provider-tools
 
-Este é um nó personalizado do **n8n** que permite criar, gerenciar e recuperar múltiplos contextos de texto. Ele foi projetado especificamente para auxiliar **Agentes de IA** (AI Agents) a recuperarem informações contextuais (regras de negócio, personas, documentação) de forma dinâmica.
+Este nó transforma textos estáticos em **Ferramentas de IA (AI Tools)** dinâmicas.
+
+Ele permite que você crie uma "biblioteca de conhecimento" (regras de negócio, FAQs, snippets de código, personas) que seu Agente de IA pode consultar **apenas quando necessário**, em vez de sobrecarregar o System Prompt com todo o texto de uma vez.
 
 ![n8n-logo](https://raw.githubusercontent.com/n8n-io/n8n/master/assets/n8n-logo.png)
 
+## 🧠 O problema que ele resolve
+
+Normalmente, para dar contexto a uma IA, você cola todo o texto no *System Prompt*. Isso tem problemas:
+1.  **Gasto de Tokens:** Você paga por todo o texto a cada execução, mesmo se a IA não usar.
+2.  **Confusão:** Muito texto pode confundir o modelo sobre qual regra seguir.
+
+**A Solução deste Nó:**
+Ele cria uma **Tool (Ferramenta)**. O Agente de IA "sabe" que essa ferramenta existe e tem acesso a informações. Quando o usuário faz uma pergunta específica, o Agente decide: *"Preciso consultar a ferramenta 'obter_contexto' para responder isso"*.
+
+---
+
 ## 🚀 Funcionalidades
 
-*   **Múltiplos Contextos:** Defina vários blocos de texto com nomes únicos (ex: `vendas_faq`, `tom_de_voz`, `tabela_precos`).
-*   **Recuperação Semântica (Simples):** O agente pode solicitar um contexto pelo nome exato.
-*   **Injeção Total:** Pode retornar todos os contextos de uma vez para popular o System Prompt de um LLM.
+*   **Busca Semântica Simplificada:** O Agente busca por palavras-chave (ex: "reembolso") e o nó encontra o contexto correto, mesmo que o nome seja "politica_de_devolucao".
+*   **Modo "Tudo":** Se o Agente pedir "tudo" ou "all", a ferramenta retorna todos os contextos (útil para resumos).
+*   **Flexibilidade:** Funciona com qualquer Agente compatível com LangChain no n8n (OpenAI Agent, ReAct Agent, etc).
+
+---
+
+## 🛠️ Como Configurar (Modo Agente)
+
+1.  **Adicione o Nó:** Procure por "Provedor de Contexto".
+2.  **Defina os Contextos:**
+    *   *Exemplo 1:*
+        *   **Nome:** `politica_reembolso`
+        *   **Conteúdo:** "O reembolso só é permitido em até 7 dias..."
+    *   *Exemplo 2:*
+        *   **Nome:** `horario_atendimento`
+        *   **Conteúdo:** "Segunda a Sexta, das 09h às 18h."
+3.  **Configure o Modo de Saída:** Selecione `Ferramenta de Agente IA`.
+4.  **Conecte ao Agente:** Ligue a saída deste nó na entrada **Tools** do seu nó de Agente (ex: *AI Agent* ou *OpenAI Chat Model* configurado com tools).
+
+---
+
+## 🤔 Exemplo de Interação (O que acontece nos bastidores)
+
+Imagine que você configurou o contexto de `politica_reembolso` acima.
+
+1.  **Usuário diz:** "Quero meu dinheiro de volta, comprei ontem."
+2.  **Cérebro do Agente (Reasoning):**
+    *   *"O usuário quer dinheiro de volta."*
+    *   *"Eu não sei as regras de cabeça, mas tenho uma ferramenta chamada `obter_contexto`."*
+    *   *Ação: Chamar `obter_contexto` com o termo "reembolso".*
+3.  **Nó Provedor de Contexto:** Recebe o termo "reembolso", procura na lista e encontra `politica_reembolso`. Retorna o texto: "O reembolso só é permitido em até 7 dias..."
+4.  **Agente Responde:** "Claro, como você comprou ontem e nossa política permite devolução em até 7 dias, podemos prosseguir."
 
 ---
 
 ## 📦 Instalação
 
-### Via Community Nodes (Recomendado)
+### Via Gerenciador de Nós (Community Nodes)
 
-Depois de publicado no NPM, siga estes passos na sua instância do n8n:
-
+No seu n8n:
 1.  Vá em **Settings > Community Nodes**.
-2.  Selecione **Install**.
-3.  Procure pelo nome do pacote (ex: `n8n-nodes-context-provider`).
-4.  Clique em **Install**.
+2.  Clique em **Install**.
+3.  Digite: `n8n-nodes-context-provider-lucas-tools`
 
 ---
 
-## 💻 Como Publicar (Windows/Local)
+## 💻 Comandos Úteis (Desenvolvimento)
 
-Se você baixou os arquivos para seu computador (ex: pasta Downloads):
+Se você está editando o código localmente:
 
-1.  Instale o [Node.js](https://nodejs.org/).
-2.  Abra o terminal (PowerShell ou CMD).
-3.  Entre na pasta do projeto:
-    ```powershell
-    cd C:\Caminho\Para\A\Pasta
-    ```
-4.  Instale as dependências:
-    ```powershell
-    npm install
-    ```
-5.  Faça login e publique:
-    ```powershell
-    npm login
-    npm publish --access public
-    ```
-    *(Nota: Se der erro de nome já existente, mude o "name" no arquivo package.json)*
+```bash
+# Instalar dependências
+npm install
 
----
+# Compilar o código
+npm run build
 
-## 💡 Como Usar
-
-### Cenário 1: Agente de IA Autônomo
-Use este nó como uma **Tool** (Ferramenta) para o seu Agente.
-
-1.  Adicione o nó **Provedor de Contexto**.
-2.  Configure o **Modo de Saída** como `Retornar por Nome`.
-3.  Preencha os contextos (ex: Nome: `suporte`, Conteúdo: `Regras de suporte...`).
-4.  Conecte este nó a um nó de "Tool" ou deixe o Agente chamá-lo se estiver configurado como ferramenta customizada.
-
-### Cenário 2: Enriquecimento de Prompt
-Antes de chamar o nó da OpenAI/LangChain:
-
-1.  Use o **Provedor de Contexto** no início do fluxo.
-2.  Configure o **Modo de Saída** como `Retornar Todos os Contextos`.
-3.  No nó da OpenAI, no campo System Prompt, use a expressão:
-    ```javascript
-    {{ $json.contextsMap }}
-    ```
+# Publicar no NPM (Lembre de subir a versão no package.json)
+npm publish --access public
+```
 
 ## 📄 Licença
 

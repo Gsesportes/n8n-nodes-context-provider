@@ -1,6 +1,6 @@
 {
-  "name": "n8n-nodes-context-provider-SEU-NOME-AQUI",
-  "version": "1.0.0",
+  "name": "n8n-nodes-context-provider-tools",
+  "version": "1.0.4",
   "description": "Nó personalizado para fornecer contextos dinâmicos em linguagem natural para agentes de IA no n8n.",
   "keywords": [
     "n8n-community-node-package",
@@ -9,13 +9,14 @@
     "agent",
     "context",
     "llm",
-    "langchain"
+    "langchain",
+    "tool"
   ],
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "Seu Nome",
-    "email": "seu@email.com"
+    "name": "Lucas",
+    "email": ""
   },
   "main": "dist/index.js",
   "scripts": {
@@ -32,6 +33,9 @@
     "nodes": [
       "dist/nodes/ContextProvider/ContextProvider.node.js"
     ]
+  },
+  "dependencies": {
+    "langchain": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
