@@ -4,6 +4,7 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
+	ISupplyDataFunctions,
 } from 'n8n-workflow';
 
 // Importação dinâmica para evitar erros de build se a lib não for carregada corretamente no ambiente n8n padrão,
@@ -20,8 +21,10 @@ export class ContextProvider implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Context Tool',
 		name: 'contextProvider',
-		icon: 'file:contextProvider.svg',
-		group: ['transform'],
+		icon: 'file:contextProviderTool.svg',
+		// @ts-ignore: 'tools' group might not be in the strict INodeTypeDescription definition yet, but is required for tools
+		group: ['tools'] as any,
+		usableAsTool: true,
 		version: 1,
 		description: 'Fornece contextos dinâmicos em linguagem natural para agentes de IA',
 		defaults: {
@@ -134,6 +137,63 @@ export class ContextProvider implements INodeType {
 			},
 		],
 	};
+
+	async supplyData(this: ISupplyDataFunctions, itemIndex: number): Promise<any> {
+		const contextsData = this.getNodeParameter('contexts', itemIndex) as {
+			context?: Array<{ contextName: string; contextContent: string }>;
+		};
+		const toolName = this.getNodeParameter('toolName', itemIndex, 'obter_contexto') as string;
+		const toolDescription = this.getNodeParameter('toolDescription', itemIndex, '') as string;
+
+		const contexts: Context[] = [];
+
+		if (contextsData.context && Array.isArray(contextsData.context)) {
+			for (const ctx of contextsData.context) {
+				contexts.push({
+					name: ctx.contextName,
+					content: ctx.contextContent,
+				});
+			}
+		}
+
+		const tool = new DynamicTool({
+			name: toolName,
+			description: toolDescription,
+			func: async (input: string) => {
+				if (typeof input !== 'string') {
+					return "Erro: O input deve ser um texto (string).";
+				}
+				const term = input.toLowerCase().trim();
+				
+				if (!term) {
+					return "Erro: O termo de busca não pode ser vazio ou conter apenas espaços.";
+				}
+				
+				if (term === 'all' || term === 'todos' || term === 'tudo' || term === 'lista') {
+					return JSON.stringify(contexts.map(c => ({ nome: c.name, conteudo: c.content })));
+				}
+
+				const matches = contexts.filter(c => 
+					c.name.toLowerCase().includes(term) || term.includes(c.name.toLowerCase())
+				);
+				
+				if (matches.length === 1) {
+					return matches[0].content;
+				}
+				if (matches.length > 1) {
+					return `Encontrei múltiplos contextos relacionados a "${term}":\n\n` + 
+							matches.map(c => `--- [${c.name}] ---\n${c.content}`).join('\n\n');
+				}
+
+				const availableNames = contexts.map(c => c.name).join(', ');
+				return `Contexto não encontrado para o termo: "${input}". Contextos disponíveis: ${availableNames}`;
+			},
+		});
+
+		return {
+			response: tool,
+		};
+	}
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
