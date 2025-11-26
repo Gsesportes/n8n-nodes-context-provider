@@ -18,10 +18,14 @@
     "removeComments": true
   },
   "include": [
-    "**/*.ts"
+    "nodes/**/*.ts",
+    "index.ts",
+    "vite.config.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/*-1.ts",
+    "**/*-1.tsx"
   ]
 }
